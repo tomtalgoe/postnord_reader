@@ -96,6 +96,16 @@ def get_processed_image(filename):
     """Allows downloading/viewing processed images."""
     return send_file(os.path.join(PROCESSED_FOLDER, filename), mimetype="image/jpeg")
 
+@app.route('/update', methods=['POST'])
+def update_server():
+    try:
+        # Navigate to project directory
+        repo_path = os.path.expanduser("~/labelref/postnord_reader")
+        subprocess.run(["git", "-C", repo_path, "pull", "origin", "main"], check=True)
+
+        return jsonify({"message": "Server updated!"}), 200
+    except subprocess.CalledProcessError as e:
+        return jsonify({"error": f"Failed to update: {e}"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
