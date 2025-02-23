@@ -96,7 +96,7 @@ def get_processed_image(filename):
     """Allows downloading/viewing processed images."""
     return send_file(os.path.join(PROCESSED_FOLDER, filename), mimetype="image/jpeg")
 
-@app.route('/update', methods=['POST'])
+@app.route('/update', methods=['GET'])
 def update_server():
     try:
         # Navigate to project directory
