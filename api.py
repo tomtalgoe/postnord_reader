@@ -1,5 +1,6 @@
 import os
 import cv2
+import subprocess
 from flask import Flask, request, send_file, jsonify
 from podtnord_ocr import process_image
 from datetime import datetime
