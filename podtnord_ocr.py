@@ -6,11 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
-
+from datetime import datetime
 
 # Initialize EasyOCR
 reader = easyocr.Reader(["en"])
 
+def logline(message):
+    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}(postnord_ocr) - {message}")
 
 def processed_image(image_path):
     image = cv2.imread(image_path)
@@ -46,11 +48,8 @@ def extract_text(image):
 
     # Combine results
     extracted_text = f"{letters_text[:3]}{numbers_text[-3:]}"
-
-    # Validate format (AAA111)
-    if re.match(r"^[A-Z]{3}\d{3}$", extracted_text):
-        return extracted_text
-    return f"Invalid: {extracted_text}"
+    logline(f"Extracted: {extracted_text} (Letters: {letters_text}, Numbers: {numbers_text})")
+    return extracted_text
 
 
 def process_dataset(dataset_path):

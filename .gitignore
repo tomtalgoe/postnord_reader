@@ -1,9 +1,8 @@
-dataset/*
+dataset/
 postnordtesting.ipynb
-processed/*
-uploads/*
+processed/
+uploads/
 ocr_results.csv
-__pycache__/api.cpython-311.pyc
-__pycache__/lol.cpython-311.pyc
-__pycache__/podtnord_ocr_function.cpython-311.pyc
-__pycache__/podtnord_ocr.cpython-311.pyc
+server.log
+virtualenv/
+__pycache__/
