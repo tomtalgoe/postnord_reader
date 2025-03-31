@@ -4,3 +4,4 @@ easyocr
 numpy
 matplotlib
 pandas
+ultralytics
