@@ -28,6 +28,11 @@ switch ($command) {
         Start-Process -NoNewWindow -FilePath "python.exe" -ArgumentList "api.py" -RedirectStandardOutput "../server.log" -RedirectStandardError "../server_err.log"
         Write-Host "Server restarted."
     }
+    "train" {
+        Write-Host "Training model..."
+        python train_yolo.py
+        Write-Host "Model training ferdig"
+    }
     "stop" {
         Stop-Server
     }
