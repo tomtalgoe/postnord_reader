@@ -1,5 +1,5 @@
-train: C:\Users\tom_t\OneDrive\Skrivebord\Onitio\postnord_reader\train
-val: C:\Users\tom_t\OneDrive\Skrivebord\Onitio\postnord_reader\val
+train: .\train
+val: .\val
 
 nc: 1
 names: ['OCR_AREA']
