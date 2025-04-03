@@ -8,3 +8,5 @@ virtualenv/
 __pycache__/
 finetune_yolo.py
 data/
+testing.ipynb
+train_yolo.py

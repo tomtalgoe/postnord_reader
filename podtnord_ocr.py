@@ -34,7 +34,7 @@ def roi_ocr(image_path):
     x1, y1, x2, y2 = best_box
     roi = image[y1:y2, x1:x2]  # Crop the image to the detected box
 
-    return roi
+    return roi, (x1, y1, x2, y2)
 
 
 def processed_image(image_aroi):
@@ -98,7 +98,7 @@ def process_dataset(dataset_path):
 
 
 def process_image(image_path):
-    image_aroi = roi_ocr(image_path)
+    image_aroi, bbox = roi_ocr(image_path)
     if image_aroi is None:
         raise ValueError("No ROI found in image. Skipping processing.")
 
@@ -107,7 +107,7 @@ def process_image(image_path):
     processed_img = processed_image(image_aroi)
     extracted_text = extract_text(processed_img)
 
-    return processed_img, extracted_text
+    return processed_img, extracted_text, image_aroi, bbox
 
 
 # Get the json for the AREA_OCR (class=0) from

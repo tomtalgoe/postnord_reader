@@ -43,13 +43,17 @@ def imageprosessing():
     image.save(image_path)
 
     try:
-        processed_img, extracted_text = process_image(image_path)
+        processed_img, extracted_text, roi_image, bbox = process_image(image_path)
         processed_image_filename = f"{timestamp}_{extracted_text[:10]}_{image.filename}"
         processed_image_path = os.path.join(PROCESSED_FOLDER, processed_image_filename)
 
         cv2.imwrite(
             processed_image_path, processed_img, [int(cv2.IMWRITE_JPEG_QUALITY), 90]
         )
+
+        roi_image_filename = f"{timestamp}_roi_{image.filename}"
+        roi_image_path = os.path.join(PROCESSED_FOLDER, roi_image_filename)
+        cv2.imwrite(roi_image_path, roi_image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
 
         elapsed_ms = (datetime.now() - starttime).total_seconds() * 1000
         logline(
@@ -73,6 +77,8 @@ def imageprosessing():
                 "text": extracted_text,
                 "processed_image_url": f"/processed/{os.path.basename(processed_image_path)}",
                 "uploaded_image_url": f"/uploads/{os.path.basename(image_path)}",
+                "roi_image_url": f"/processed/{roi_image_filename}",
+                "bbox": bbox,
                 "processing_time_ms": round(elapsed_ms, 2),
             }
         )
