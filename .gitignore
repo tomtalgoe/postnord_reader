@@ -1,8 +1,4 @@
-dataset/
 postnordtesting.ipynb
-processed/
-uploads/
-ocr_results.csv
 server.log
 virtualenv/
 __pycache__/

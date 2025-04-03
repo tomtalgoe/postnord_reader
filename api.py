@@ -72,8 +72,11 @@ def imageprosessing():
         with open(metadata_path, "w") as f:
             json.dump(metadata, f)
 
+        bbox = [int(x) for x in bbox] if bbox else None
+
         return jsonify(
             {
+                "timestamp": timestamp,
                 "text": extracted_text,
                 "processed_image_url": f"/processed/{os.path.basename(processed_image_path)}",
                 "uploaded_image_url": f"/uploads/{os.path.basename(image_path)}",
@@ -261,7 +264,12 @@ def feedback():
                     .astype(int)
                     .tolist()
                 )
-                annotation = {"bbox": best_box, "class": 0, "image": upload_file}
+                annotation = {
+                    "bbox": best_box,
+                    "class": 0,
+                    "image": upload_file,
+                    "timestamp": timestamp,
+                }
                 annotation_path = os.path.join(
                     original_dest, upload_file.rsplit(".", 1)[0] + ".json"
                 )

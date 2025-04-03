@@ -108,6 +108,3 @@ def process_image(image_path):
     extracted_text = extract_text(processed_img)
 
     return processed_img, extracted_text, image_aroi, bbox
-
-
-# Get the json for the AREA_OCR (class=0) from
