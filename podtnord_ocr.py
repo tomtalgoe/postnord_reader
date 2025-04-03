@@ -18,7 +18,7 @@ def logline(message):
 
 
 # Region of intrest/ROI with Yolo11 model
-model = YOLO("runs\detect/train7/weights/best.pt")
+model = YOLO("runs/detect/train7/weights/best.pt")
 
 
 # doing
