@@ -100,11 +100,27 @@ def imageprocessing():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-
 @app.route("/uploads/<filename>")
 def get_uploaded_image(filename):
     return send_file(os.path.join(UPLOAD_FOLDER, filename))
 
+@app.route("/uploads")
+def list_uploaded_images():
+    uploaded_files = os.listdir(UPLOAD_FOLDER)
+    logline(f"Uploaded files: {uploaded_files}")
+    return """
+    <html>
+    <head>
+        <title>Uploaded Images</title>
+    </head>
+    <body>
+        <h1>Uploaded Images</h1>
+        <ul>
+        """ + "".join([f'<li><a href="/uploads/{file}">{file}</a></li>' for file in uploaded_files]) + """
+        </ul>
+    </body>
+    </html>
+    """
 
 @app.route("/processed/<filename>")
 def get_processed_image(filename):

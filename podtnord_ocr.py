@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 from ultralytics import YOLO
 import traceback
+import psutil  # Add this import to monitor memory usage
 
 # Initialize EasyOCR
 reader = easyocr.Reader(["en"])
@@ -16,6 +17,12 @@ reader = easyocr.Reader(["en"])
 
 def logline(message):
     print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}(postnord_ocr) - {message}")
+
+
+def log_memory_usage():
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+    logline(f"Memory usage: RSS={memory_info.rss / (1024 * 1024):.2f} MB, VMS={memory_info.vms / (1024 * 1024):.2f} MB")
 
 
 # Normalize YOLO model path
@@ -27,6 +34,7 @@ model = YOLO(model_path)
 
 def roi_ocr(image_path):
     try:
+        log_memory_usage()  # Log memory usage before processing
         # Normalize image path
         image_path = os.path.normpath(image_path)
         logline(f"Processing image: {image_path}")
@@ -56,6 +64,7 @@ def roi_ocr(image_path):
 
 def processed_image(image_aroi):
     try:
+        log_memory_usage()  # Log memory usage before processing
         image = image_aroi
 
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -132,6 +141,7 @@ def process_dataset(dataset_path):
 
 def process_image(image_path):
     try:
+        log_memory_usage()  # Log memory usage before processing
         image_aroi, bbox = roi_ocr(image_path)
         if image_aroi is None:
             logline("No ROI found in image. Skipping processing.")
