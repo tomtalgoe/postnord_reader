@@ -37,16 +37,23 @@ def imageprocessing():
 
     if image.filename == "":
         return jsonify({"error": "No selected file"}), 400
-
+    logline(f"Received image: {image.filename}")
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")[:-3]
+    logline(f"Timestamp: {timestamp}")
     unique_filename = f"{timestamp}_{image.filename}"
+    logline(f"Unique filename: {unique_filename}")
     image_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-    image.save(image_path)
-
+    logline(f"Saving image to: {image_path}")
     try:
+        image.save(image_path)
+        logline(f"Image saved successfully: {image_path}")
+
         processed_img, extracted_text, roi_image, bbox = process_image(image_path)
+        logline(f"Processed image: {processed_img.shape}")
         processed_image_filename = f"{timestamp}_{extracted_text[:10]}_{image.filename}"
+        logline(f"Processed image filename: {processed_image_filename}")
         processed_image_path = os.path.join(PROCESSED_FOLDER, processed_image_filename)
+        logline(f"Processed image saved as: {processed_image_path}")
 
         cv2.imwrite(
             processed_image_path, processed_img, [int(cv2.IMWRITE_JPEG_QUALITY), 90]
@@ -55,6 +62,7 @@ def imageprocessing():
         roi_image_filename = f"{timestamp}_roi_{image.filename}"
         roi_image_path = os.path.join(PROCESSED_FOLDER, roi_image_filename)
         cv2.imwrite(roi_image_path, roi_image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        logline(f"ROI image saved as: {roi_image_path}")
 
         elapsed_ms = (datetime.now() - starttime).total_seconds() * 1000
         logline(
