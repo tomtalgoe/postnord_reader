@@ -6,3 +6,5 @@ ocr_results.csv
 server.log
 virtualenv/
 __pycache__/
+finetune_yolo.py
+data/

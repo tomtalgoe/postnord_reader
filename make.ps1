@@ -9,7 +9,8 @@ function Stop-Server {
     if ($process) {
         $process | Stop-Process -Force
         Write-Host "Server stopped."
-    } else {
+    }
+    else {
         Write-Host "No running server found."
     }
 }
@@ -19,6 +20,11 @@ switch ($command) {
         Write-Host "Starting server..."
         virtualenv/Scripts/activate
         Start-Process -NoNewWindow -FilePath "python.exe" -ArgumentList "api.py" -RedirectStandardOutput "../server.log" -RedirectStandardError "../server_err.log"
+        Write-Host "Server started."
+    }
+    "startlocal" {
+        Write-Host "Starting server..."
+        python.exe api.py
         Write-Host "Server started."
     }
     "restart" {
