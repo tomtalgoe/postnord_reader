@@ -16,6 +16,7 @@ UPLOAD_FOLDER = os.path.join(PENDING_FOLDER, "original")
 PROCESSED_FOLDER = os.path.join(PENDING_FOLDER, "processed")
 LOG_FILE = "../server.log"
 
+os.makedirs(PENDING_FOLDER, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
@@ -24,8 +25,8 @@ def logline(message):
     print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}(api) - {message}")
 
 
-@app.route("/imageprosessing", methods=["POST"])
-def imageprosessing():
+@app.route("/imageprocessing", methods=["POST"])
+def imageprocessing():
     starttime = datetime.now()
     logline("Image Processing API, files: {}".format(request.files))
 
