@@ -1,8 +1,10 @@
 from ultralytics import YOLO
-
-# Path to YOLOv11 repo
-model = YOLO("runs/detect/train7/weights/best.pt")
-
-
-# Train the model
-model.train(data="data.yaml", epochs=20, imgsz=640, batch=16, device=0)
+ 
+def main():
+    model = YOLO("yolo11l.pt")  # Or your own weights
+    model.train(data="data.yaml", epochs=20, imgsz=640, batch=16, device=0)
+ 
+if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()  # Optional for scripts turned into .exe
+    main()

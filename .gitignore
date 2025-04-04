@@ -7,3 +7,4 @@ data/wrong
 data/pending
 testing.ipynb
 train_yolo.py
+data/*.zip
