@@ -2,7 +2,8 @@ postnordtesting.ipynb
 server.log
 virtualenv/
 __pycache__/
-finetune_yolo.py
-data/
+data/correct
+data/wrong
+data/pending
 testing.ipynb
 train_yolo.py
