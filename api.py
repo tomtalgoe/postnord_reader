@@ -3,6 +3,7 @@ import cv2
 import subprocess
 import traceback
 import json
+import zipfile
 from flask import Flask, request, send_file, jsonify
 from podtnord_ocr import process_image, model
 from datetime import datetime
@@ -23,6 +24,8 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 def logline(message):
     print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}(api) - {message}")
+    with open(LOG_FILE, "a") as log_file:
+        log_file.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}(api) - {message}\n")
 
 
 @app.route("/imageprocessing", methods=["POST"])
@@ -104,63 +107,136 @@ def imageprocessing():
 def get_uploaded_image(filename):
     return send_file(os.path.join(UPLOAD_FOLDER, filename))
 
-@app.route("/uploads")
-def list_uploaded_images():
-    uploaded_files = os.listdir(UPLOAD_FOLDER)
-    logline(f"Uploaded files: {uploaded_files}")
-    return """
-    <html>
-    <head>
-        <title>Uploaded Images</title>
-    </head>
-    <body>
-        <h1>Uploaded Images</h1>
-        <ul>
-        """ + "".join([f'<li><a href="/uploads/{file}">{file}</a></li>' for file in uploaded_files]) + """
-        </ul>
-    </body>
-    </html>
+@app.route("/wrong/<filename>")
+def get_wrong_image(filename):
+    return send_file(os.path.join(DATA_FOLDER, "wrong", "original", filename), mimetype="image/jpeg")
+
+@app.route("/wrong/download_all")
+def download_wrong_images():
+    zip_filename = "wrong_images.zip"
+    zip_path = os.path.join(DATA_FOLDER, zip_filename)
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(os.path.join(DATA_FOLDER, "wrong", "original")):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, os.path.join(DATA_FOLDER, "wrong"))
+                zipf.write(file_path, arcname)
+    logline(f"Created wrong ZIP file: {zip_path} with length {os.path.getsize(zip_path)} bytes")
+    return send_file(zip_path, as_attachment=True)
+
+@app.route("/wrong/remove_all")
+def remove_wrong_images():
+    try:
+        for root, dirs, files in os.walk(os.path.join(DATA_FOLDER, "wrong")):
+            for file in files:
+                os.remove(os.path.join(root, file))
+        logline("All wrongly classified images removed successfully.")
+        return jsonify({"message": "All wrongly classified images removed successfully."}), 200
+    except Exception as e:
+        logline(f"Error removing wrongly classified images: {e}")
+        return jsonify({"error": str(e)}), 500
+
+from flask import send_file
+from common import generate_navbar, generate_html
+
+@app.route("/wrong")
+def list_wrong_images():
+    wrong_folder = os.path.join(DATA_FOLDER, "wrong", "original")
+    files = [f for f in os.listdir(wrong_folder) if f.endswith(".jpg")]
+
+    file_list_html = "<ul id='file-list'>"
+    for file in files:
+        timestamp, remaining = file.split("_")[0], file.split("_")[1].split(".")[0]
+        formatted_timestamp = datetime.strptime(timestamp, "%Y%m%d-%H%M%S-%f").strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        link_text = f"{formatted_timestamp} - {remaining}"
+        file_list_html += f"<li><a href='#' onclick=\"showImage('{file}', 'wrong')\" id=\"link-{file}\">{link_text}</a></li>"
+    file_list_html += "</ul>"
+
+    content = f"""
+    <h1>Wrongly Classified Images</h1>
+    <div class='container'>
+        <div class='file-list'>
+            {file_list_html}
+        </div>
+        <div class='image-viewer' id='image-viewer'>
+            <h2>Select an image to view details</h2>
+        </div>
+    </div>
     """
+
+    return generate_html("wrong", content)
+
+@app.route("/correct/<filename>")
+def get_correct_image(filename):
+    return send_file(os.path.join(DATA_FOLDER, "correct", "original", filename), mimetype="image/jpeg")
+
+@app.route("/correct/download_all")
+def download_correct_images():
+    zip_filename = "correct_images.zip"
+    zip_path = os.path.join(DATA_FOLDER, zip_filename)
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(os.path.join(DATA_FOLDER, "wrong", "original")):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, os.path.join(DATA_FOLDER, "wrong"))
+                zipf.write(file_path, arcname)
+    logline(f"Created correct ZIP file: {zip_path} with length {os.path.getsize(zip_path)} bytes")
+    return send_file(zip_path, as_attachment=True)
+
+@app.route("/correct/remove_all")
+def remove_correct_images():
+    try:
+        for root, dirs, files in os.walk(os.path.join(DATA_FOLDER, "correct")):
+            for file in files:
+                os.remove(os.path.join(root, file))
+        logline("All correctly classified images removed successfully.")
+        return jsonify({"message": "All correctly classified images removed successfully."}), 200
+    except Exception as e:
+        logline(f"Error removing correctly classified images: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/correct")
+def list_correct_images():
+    correct_folder = os.path.join(DATA_FOLDER, "correct", "original")
+    files = [f for f in os.listdir(correct_folder) if f.endswith(".jpg")]
+
+    file_list_html = "<ul id='file-list'>"
+    for file in files:
+        timestamp, remaining = file.split("_")[0], file.split("_")[1].split(".")[0]
+        formatted_timestamp = datetime.strptime(timestamp, "%Y%m%d-%H%M%S-%f").strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        link_text = f"{formatted_timestamp} - {remaining}"
+        file_list_html += f"<li><a href='#' onclick=\"showImage('{file}', 'correct')\" id=\"link-{file}\">{link_text}</a></li>"
+    file_list_html += "</ul>"
+
+    content = f"""
+    <h1>Correctly Classified Images</h1>
+    <div class='container'>
+        <div class='file-list'>
+            {file_list_html}
+        </div>
+        <div class='image-viewer' id='image-viewer'>
+            <h2>Select an image to view details</h2>
+        </div>
+    </div>
+    """
+
+    return generate_html("correct", content)
+
+@app.route("/correct/original/<filename>")
+def get_correct_file(filename):
+    return send_file(os.path.join(DATA_FOLDER, "correct", "original", filename))
 
 @app.route("/processed/<filename>")
 def get_processed_image(filename):
     return send_file(os.path.join(PROCESSED_FOLDER, filename), mimetype="image/jpeg")
 
-
-@app.route("/update")
-def update_server():
-    try:
-        repo_path = os.path.expanduser("~/labelref/postnord_reader")
-        subprocess.run(["git", "-C", repo_path, "pull", "origin", "main"], check=True)
-        return jsonify({"message": "Server updated!"})
-    except subprocess.CalledProcessError as e:
-        return jsonify({"error": f"Failed to update: {e}"}), 500
-
-
+# Page showing all the wrongly classified images. The user can select one and see the image and the extracted text.
+# It should also be possible to download the original image and one for downloading all the wrongly classified images as a zip file.
 @app.route("/files")
 def list_files():
-    html = """
-    <html>
-    <head>
-        <style>
-            body { font-family: Arial, sans-serif; }
-            .container { display: flex; }
-            .file-list { width: 50%; }
-            .image-viewer { width: 50%; text-align: center; }
-            img { max-width: 100%; height: auto; }
-            ul { list-style-type: none; padding: 0; }
-            li { margin-bottom: 10px; }
-            a { text-decoration: none; color: blue; }
-            a:hover { text-decoration: underline; }
-        </style>
-    </head>
-    <body>
-        <h1>Pending Files for Review</h1>
-        <div class="container">
-            <div class="file-list">
-                <ul>
-    """
+    navbar = generate_navbar("files")
 
+    file_list_html = "<ul id='file-list'>"
     for meta_file in os.listdir(PROCESSED_FOLDER):
         if not meta_file.endswith(".json"):
             continue
@@ -169,74 +245,49 @@ def list_files():
             meta = json.load(f)
 
         timestamp = meta["timestamp"]
+        filename= meta['filename']
         extracted_text = meta["extracted_text"]
         processing_time = meta.get("processing_time_ms", "N/A")
-        image_name = next(
-            (f for f in os.listdir(UPLOAD_FOLDER) if f.startswith(timestamp)), None
-        )
-        processed_file = next(
-            (
-                f
-                for f in os.listdir(PROCESSED_FOLDER)
-                if f.startswith(timestamp) and not f.endswith(".json")
-            ),
-            None,
-        )
+        formatted_timestamp = datetime.strptime(timestamp, "%Y%m%d-%H%M%S-%f").strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        link_text = f"{formatted_timestamp} - {extracted_text} (⏱ {processing_time} ms)"
 
-        html += f"<li><a href=\"#\" onclick=\"showImages('{image_name}', '{processed_file}', '{timestamp}', '{extracted_text}', '{processing_time}')\">Uploaded: {image_name or 'N/A'}<br>Processed: {processed_file} (⏱ {processing_time} ms)</a></li>"
+        file_list_html += f"<li><a href='#' onclick=\"showFile('{timestamp}', '{extracted_text}', '{filename}')\" id=\"link-{timestamp}\">{link_text}</a></li>"
+    file_list_html += "</ul>"
 
-    html += """
-                </ul>
-            </div>
-            <div class="image-viewer" id="image-viewer">
-                <h2>Select a file to view images</h2>
-            </div>
+    content = f"""
+    <h1>Pending Files for Review</h1>
+    <div class='container'>
+        <div class='file-list'>
+            {file_list_html}
         </div>
-        <script>
-            function showImages(uploadFile, processedFile, timestamp, extractedText, processingTime) {
-                const viewer = document.getElementById('image-viewer');
-                viewer.innerHTML = `
-                    <h2>Images for ${timestamp}</h2>
-                    <h3>Uploaded Image</h3>
-                    <img src="/uploads/${uploadFile}" alt="Uploaded Image">
-                    <h3>Processed Image</h3>
-                    <img src="/processed/${processedFile}" alt="Processed Image">
-                    <p>Extracted Text: ${extractedText}</p>
-                    <p>Processing time: ${processingTime} ms</p>
-                    <p>Timestamp: ${timestamp}</p>
-                    <button onclick="sendFeedback('${timestamp}', true)">✅ Correct</button>
-                    <button onclick="sendFeedback('${timestamp}', false)">❌ Wrong</button>
-                    <div id="feedback-msg"></div>
-                `;
-            }
+        <div class='image-viewer' id='image-viewer'>
+            <h2>Select a file to view details</h2>
+        </div>
+    </div>
+    <script>
+        function showFile(timestamp, extractedText, filename) {{
+            const viewer = document.getElementById('image-viewer');
+            const links = document.querySelectorAll('#file-list a');
+            links.forEach(link => link.classList.remove('selected'));
+            document.getElementById(`link-${{timestamp}}`).classList.add('selected');
 
-            function sendFeedback(timestamp, correct) {
-                fetch('/feedback', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ timestamp, correct })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    const msgBox = document.getElementById("feedback-msg");
-                    if (data.message) {
-                        msgBox.innerHTML = `<p style="color:green;">${data.message}</p>`;
-                    } else {
-                        msgBox.innerHTML = `<p style="color:red;">${data.error}</p>`;
-                    }
-                })
-                .catch(error => {
-                    document.getElementById("feedback-msg").innerHTML = `<p style="color:red;">Error: ${error}</p>`;
-                });
-            }
-        </script>
-    </body>
-    </html>
+            const uploadFile = `${{timestamp}}_${{filename}}`;
+            const processedFile = `${{timestamp}}_${{extractedText}}_${{filename}}`;
+
+            viewer.innerHTML = `
+                <h2>File Details</h2>
+                <h3>Uploaded Image</h3>
+                <img src="/uploads/${{uploadFile}}" alt="Uploaded Image">
+                <h3>Processed Image</h3>
+                <img src="/processed/${{processedFile}}" alt="Processed Image">
+                <p>Extracted Text: ${{extractedText}}</p>
+                <p>Filename: ${{filename}}</p>
+            `;
+        }}
+    </script>
     """
-    return html
 
+    return generate_html(navbar, content)
 
 @app.route("/feedback", methods=["POST"])
 def feedback():
@@ -314,7 +365,16 @@ def view_log():
         with open(LOG_FILE, "r") as log_file:
             lines = log_file.readlines()
             last_lines = lines[-100:]
-            return f"<html><body><h1>Log File</h1><pre>{''.join(last_lines)}</pre></body></html>"
+            return generate_html("log", f"""<h1>Log File</h1>
+                <pre>{''.join(last_lines)}</pre>
+                <a href="#" onclick="confirmRestart()">Update server</a>
+                <script>
+                    function confirmRestart() {{
+                        if (confirm("Are you sure you want the server to fetch latest checkedin code and then restart the server?")) {{
+                            window.location.href = '/update';
+                        }}
+                    }}
+                </script>""")
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
