@@ -157,6 +157,8 @@ def list_wrong_images():
     <div class='container'>
         <div class='file-list'>
             {file_list_html}
+            <button onclick="window.location.href='/wrong/download_all'">Download All</button>
+            <button onclick="window.location.href='/wrong/remove_all'">Remove All</button>
         </div>
         <div class='image-viewer' id='image-viewer'>
             <h2>Select an image to view details</h2>
@@ -213,6 +215,8 @@ def list_correct_images():
     <div class='container'>
         <div class='file-list'>
             {file_list_html}
+            <button onclick="window.location.href='/correct/download_all'">Download All</button>
+            <button onclick="window.location.href='/correct/remove_all'">Remove All</button>
         </div>
         <div class='image-viewer' id='image-viewer'>
             <h2>Select an image to view details</h2>
