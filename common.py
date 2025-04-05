@@ -50,31 +50,32 @@ def get_common_styles():
 
 def add_script():
     return """<script>
-        function showImage(imageFile, fileStatus) {
+        function showImage(timestamp, extracted, filename, folder) {
             const viewer = document.getElementById('image-viewer');
             const links = document.querySelectorAll('#file-list a');
             links.forEach(link => link.classList.remove('selected'));
-            document.getElementById(`link-${imageFile}`).classList.add('selected');
+            document.getElementById(`link-${timestamp}`).classList.add('selected');
 
             viewer.innerHTML = `
                 <h2>Image Details</h2>
-                <img src="/${fileStatus}/${imageFile}" alt="Selected Image" style="max-height: 300px;">
+                <img src="/${folder}/${timestamp}_${filename}.jpg" alt="Selected Image" style="max-height: 300px;">
+                <h3>Processed Image</h3>
+                <img src="/${folder}/${timestamp}_${extracted}_${filename}.jpg" alt="Processed Image">
             `;
-            if (fileStatus=="correct") {
-                const jsonFile = imageFile.replace('.jpg', '.json');
-
-                fetch(`/${fileStatus}/original/${jsonFile}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        viewer.innerHTML += `
-                            <h3>JSON Information</h3>
-                            <pre>${JSON.stringify(data, null, 2)}</pre>
-                        `;
-                    })
-                    .catch(error => {
-                        viewer.innerHTML += `<p style=\"color:red;\">Error loading JSON: ${error}</p>`;
-                    });
-            }
+                const jsonFile = timestamp.replace('.jpg', '.json');
+                if(folder === 'correct') {
+                    fetch(`/${folder}/${timestamp}_${filename}.json`)
+                        .then(response => response.json())
+                        .then(data => {
+                            viewer.innerHTML += `
+                                <h3>JSON Information</h3>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            `;
+                        })
+                        .catch(error => {
+                            viewer.innerHTML += `<p style=\"color:red;\">No JSON: ${error}</p>`;
+                        });
+                }
         }
     </script>"""
 

@@ -109,6 +109,8 @@ def get_uploaded_image(filename):
 
 @app.route("/wrong/<filename>")
 def get_wrong_image(filename):
+    if os.path.exists(os.path.join(DATA_FOLDER, "wrong", "processed", filename)):
+        return send_file(os.path.join(DATA_FOLDER, "wrong", "processed", filename), mimetype="image/jpeg")
     return send_file(os.path.join(DATA_FOLDER, "wrong", "original", filename), mimetype="image/jpeg")
 
 @app.route("/wrong/download_all")
@@ -141,15 +143,15 @@ from common import generate_navbar, generate_html
 
 @app.route("/wrong")
 def list_wrong_images():
-    wrong_folder = os.path.join(DATA_FOLDER, "wrong", "original")
+    wrong_folder = os.path.join(DATA_FOLDER, "wrong", "processed")
     files = [f for f in os.listdir(wrong_folder) if f.endswith(".jpg")]
 
     file_list_html = "<ul id='file-list'>"
     for file in files:
-        timestamp, remaining = file.split("_")[0], file.split("_")[1].split(".")[0]
+        timestamp, extracted, remaining = file.split("_")[0], file.split("_")[1], file.split("_")[2].split(".")[0]
         formatted_timestamp = datetime.strptime(timestamp, "%Y%m%d-%H%M%S-%f").strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        link_text = f"{formatted_timestamp} - {remaining}"
-        file_list_html += f"<li><a href='#' onclick=\"showImage('{file}', 'wrong')\" id=\"link-{file}\">{link_text}</a></li>"
+        link_text = f"{formatted_timestamp} - {extracted} - {remaining}"
+        file_list_html += f"<li><a href='#' onclick=\"showImage('{timestamp}', '{extracted}', '{remaining}', 'wrong')\" id=\"link-{timestamp}\">{link_text}</a></li>"
     file_list_html += "</ul>"
 
     content = f"""
@@ -170,6 +172,8 @@ def list_wrong_images():
 
 @app.route("/correct/<filename>")
 def get_correct_image(filename):
+    if os.path.exists(os.path.join(DATA_FOLDER, "correct", "processed", filename)):
+        return send_file(os.path.join(DATA_FOLDER, "correct", "processed", filename), mimetype="image/jpeg")
     return send_file(os.path.join(DATA_FOLDER, "correct", "original", filename), mimetype="image/jpeg")
 
 @app.route("/correct/download_all")
@@ -199,15 +203,15 @@ def remove_correct_images():
 
 @app.route("/correct")
 def list_correct_images():
-    correct_folder = os.path.join(DATA_FOLDER, "correct", "original")
+    correct_folder = os.path.join(DATA_FOLDER, "correct", "processed")
     files = [f for f in os.listdir(correct_folder) if f.endswith(".jpg")]
 
     file_list_html = "<ul id='file-list'>"
     for file in files:
-        timestamp, remaining = file.split("_")[0], file.split("_")[1].split(".")[0]
+        timestamp, extracted, remaining = file.split("_")[0], file.split("_")[1], file.split("_")[2].split(".")[0]
         formatted_timestamp = datetime.strptime(timestamp, "%Y%m%d-%H%M%S-%f").strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        link_text = f"{formatted_timestamp} - {remaining}"
-        file_list_html += f"<li><a href='#' onclick=\"showImage('{file}', 'correct')\" id=\"link-{file}\">{link_text}</a></li>"
+        link_text = f"{formatted_timestamp} - {extracted} - {remaining}"
+        file_list_html += f"<li><a href='#' onclick=\"showImage('{timestamp}', '{extracted}', '{remaining}', 'correct')\" id=\"link-{timestamp}\">{link_text}</a></li>"
     file_list_html += "</ul>"
 
     content = f"""
