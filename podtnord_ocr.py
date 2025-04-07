@@ -22,14 +22,17 @@ def logline(message):
 def log_memory_usage():
     process = psutil.Process(os.getpid())
     memory_info = process.memory_info()
-    logline(f"Memory usage: RSS={memory_info.rss / (1024 * 1024):.2f} MB, VMS={memory_info.vms / (1024 * 1024):.2f} MB")
+    logline(
+        f"Memory usage: RSS={memory_info.rss / (1024 * 1024):.2f} MB, VMS={memory_info.vms / (1024 * 1024):.2f} MB"
+    )
 
 
 # Normalize YOLO model path
-model_path = os.path.join("runs", "detect", "train7", "weights", "best.pt")
+model_path = os.path.join("runs", "detect", "train17", "weights", "best.pt")
 if not os.path.exists(model_path):
     logline(f"YOLO model path does not exist: {model_path}")
 model = YOLO(model_path)
+5
 
 
 def roi_ocr(image_path):
@@ -51,7 +54,9 @@ def roi_ocr(image_path):
             return None, None
 
         # Get the box with highest confidence
-        best_box = results.boxes.xyxy[results.boxes.conf.argmax()].cpu().numpy().astype(int)
+        best_box = (
+            results.boxes.xyxy[results.boxes.conf.argmax()].cpu().numpy().astype(int)
+        )
         x1, y1, x2, y2 = best_box
         roi = image[y1:y2, x1:x2]  # Crop the image to the detected box
 
@@ -75,27 +80,33 @@ def processed_image(image_aroi):
         blur = cv2.GaussianBlur(contrast, (3, 3), 0)
         logline("Applied Gaussian blur")
 
-        thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+        thresh = cv2.adaptiveThreshold(
+            blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+        )
         logline("Applied adaptive thresholding, blur: {}".format(blur.shape))
 
-        return blur
+        return thresh
     except Exception as e:
         logline(f"Error processing image: {e}")
         traceback.print_exc()
-        return null
+        return None
 
 
 def extract_text(image):
     try:
         # Ensure EasyOCR runs synchronously
-        letters = reader.readtext(image, detail=0, allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        letters = reader.readtext(
+            image, detail=0, allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        )
         letters_text = "".join(letters).strip().upper()
 
         numbers = reader.readtext(image, detail=0, allowlist="0123456789")
         numbers_text = "".join(numbers).strip()
 
         extracted_text = f"{letters_text[:3]}{numbers_text[-3:]}"
-        logline(f"Extracted: {extracted_text} (Letters: {letters_text}, Numbers: {numbers_text})")
+        logline(
+            f"Extracted: {extracted_text} (Letters: {letters_text}, Numbers: {numbers_text})"
+        )
         return extracted_text
     except Exception as e:
         logline(f"Error in extract_text: {e}")
@@ -161,4 +172,3 @@ def process_image(image_path):
         return None, None, None, None
     finally:
         logline("Finished processing image.")
-

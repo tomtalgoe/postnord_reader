@@ -7,3 +7,5 @@ data/wrong
 data/pending
 testing.ipynb
 train_yolo.py
+runs/
+testing.ipynb
