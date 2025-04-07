@@ -10,3 +10,4 @@ train_yolo.py
 runs/
 testing.ipynb
 data/*.zip
+transformers/
