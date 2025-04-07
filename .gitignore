@@ -9,3 +9,4 @@ testing.ipynb
 train_yolo.py
 runs/
 testing.ipynb
+data/*.zip
