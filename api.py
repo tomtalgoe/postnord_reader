@@ -5,7 +5,7 @@ import traceback
 import json
 import zipfile
 from flask import Flask, request, send_file, jsonify
-from podtnord_ocr import process_image, model, config
+from podtnord_ocr import process_image, model, config, reload_model
 from datetime import datetime
 
 app = Flask(__name__)
@@ -380,33 +380,44 @@ def view_log():
             last_lines = lines[-100:]
 
         # Get available model folders
-        model_folders = os.listdir(os.path.join("runs", "detect"))
-        model_folders = sorted(model_folders, key=lambda x: int(x.replace("train", "")), reverse=True)
+        model_folders = [
+            folder for folder in os.listdir(os.path.join("runs", "detect"))
+            if os.path.isfile(os.path.join("runs", "detect", folder, "weights", "best.pt"))
+        ]
+        model_folders = sorted(model_folders, key=lambda x: int(x.replace("train", "0")), reverse=True)
         model_folders_html = "".join(
             f"<option value='{folder}' {'selected' if folder == config.get('model_folder') else ''}>{folder}</option>"
             for folder in model_folders
         )
 
         return generate_html("log", f"""
-            <h1>Log File</h1>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
             <a href="#" onclick="confirmRestart()">Update server</a>
-            <form method="POST" action="/config" style="display: flex; align-items: center;">
-                <label for="model_folder" style="margin-right: 10px;">Model Folders:</label>
-                <select name="model_folder" id="model_folder" style="margin-right: 10px;">
-                {model_folders_html}
-                </select>
-                <button type="submit">Update Model</button>
-            </form>
+            <div style="display: flex; align-items: center; gap: 10px;">
+            <label for='model-folder'>Select Model:</label>
+            <select name='model_folder' id='model-folder'>
+            {model_folders_html}
+            </select>
+            <button onclick="updateModel()">Update Model</button>
             </div>
-            <script>
-            function confirmRestart() {{
-                if (confirm("Are you sure you want the server to fetch latest checked-in code and then restart the server?")) {{
-                window.location.href = '/update';
-                }}
+        </div>
+        <h1>Log File</h1>
+        <pre>{''.join(last_lines)}</pre>
+        <script>
+            function updateModel() {{
+            const selectedModel = document.getElementById('model-folder').value;
+            fetch('/config', {{
+            method: 'POST',
+            headers: {{
+            'Content-Type': 'application/json',
+            }},
+            body: JSON.stringify({{ model_folder: selectedModel }})
+            }})
+            .then(response => response.json())
+            .then(data => alert(data.message || 'Model updated successfully'))
+            .catch(error => alert('Error: ' + error));
             }}
-            </script>
-            <pre>{''.join(last_lines)}</pre>
+        </script>
         """)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -416,6 +427,7 @@ def config_route():
     if request.method == "POST":
         data = request.json
         model_folder = data.get("model_folder")
+        logline(f"Updating model folder to: {model_folder}")
         if model_folder:
             with open(config_path, 'r+') as f:
                 config = json.load(f)
@@ -424,7 +436,7 @@ def config_route():
                 json.dump(config, f)
                 f.truncate()
             reload_model()  # Reload YOLO model with new configuration
-            return jsonify({"message": "Configuration updated successfully."}), 200
+            return jsonify({"message": "The new training model '{}' has been set.".format(model_folder)}), 200
         return jsonify({"error": "Invalid model folder."}), 400
 
     with open(config_path, 'r') as f:
