@@ -10,6 +10,7 @@ from datetime import datetime
 from ultralytics import YOLO
 import traceback
 import psutil  # Add this import to monitor memory usage
+import json  # Add this import to handle configuration
 
 # Initialize EasyOCR
 reader = easyocr.Reader(["en"])
@@ -25,11 +26,33 @@ def log_memory_usage():
     logline(f"Memory usage: RSS={memory_info.rss / (1024 * 1024):.2f} MB, VMS={memory_info.vms / (1024 * 1024):.2f} MB")
 
 
-# Normalize YOLO model path
-model_path = os.path.join("runs", "detect", "train7", "weights", "best.pt")
+# Load configuration from config.json
+config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+if not os.path.exists(config_path):
+    with open(config_path, 'w') as f:
+        json.dump({"model_folder": "train7"}, f)
+
+with open(config_path, 'r') as f:
+    config = json.load(f)
+
+model_folder = config.get("model_folder", "train7")
+model_path = os.path.join("runs", "detect", model_folder, "weights", "best.pt")
 if not os.path.exists(model_path):
     logline(f"YOLO model path does not exist: {model_path}")
 model = YOLO(model_path)
+
+# Function to reload YOLO model when configuration changes
+def reload_model():
+    global model, model_path
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    model_folder = config.get("model_folder", "train7")
+    model_path = os.path.join("runs", "detect", model_folder, "weights", "best.pt")
+    if not os.path.exists(model_path):
+        logline(f"YOLO model path does not exist: {model_path}")
+    else:
+        model = YOLO(model_path)
+        logline(f"YOLO model reloaded with path: {model_path}")
 
 
 def roi_ocr(image_path):

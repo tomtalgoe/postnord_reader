@@ -5,7 +5,7 @@ import traceback
 import json
 import zipfile
 from flask import Flask, request, send_file, jsonify
-from podtnord_ocr import process_image, model
+from podtnord_ocr import process_image, model, config
 from datetime import datetime
 
 app = Flask(__name__)
@@ -21,6 +21,11 @@ os.makedirs(PENDING_FOLDER, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
+# Load configuration
+config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+if not os.path.exists(config_path):
+    with open(config_path, 'w') as f:
+        json.dump({"model_folder": "train7"}, f)
 
 def logline(message):
     print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}(api) - {message}")
@@ -373,19 +378,58 @@ def view_log():
         with open(LOG_FILE, "r") as log_file:
             lines = log_file.readlines()
             last_lines = lines[-100:]
-            return generate_html("log", f"""<h1>Log File</h1>
-                <pre>{''.join(last_lines)}</pre>
-                <a href="#" onclick="confirmRestart()">Update server</a>
-                <script>
-                    function confirmRestart() {{
-                        if (confirm("Are you sure you want the server to fetch latest checkedin code and then restart the server?")) {{
-                            window.location.href = '/update';
-                        }}
-                    }}
-                </script>""")
+
+        # Get available model folders
+        model_folders = os.listdir(os.path.join("runs", "detect"))
+        model_folders = sorted(model_folders, key=lambda x: int(x.replace("train", "")), reverse=True)
+        model_folders_html = "".join(
+            f"<option value='{folder}' {'selected' if folder == config.get('model_folder') else ''}>{folder}</option>"
+            for folder in model_folders
+        )
+
+        return generate_html("log", f"""
+            <h1>Log File</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="#" onclick="confirmRestart()">Update server</a>
+            <form method="POST" action="/config" style="display: flex; align-items: center;">
+                <label for="model_folder" style="margin-right: 10px;">Model Folders:</label>
+                <select name="model_folder" id="model_folder" style="margin-right: 10px;">
+                {model_folders_html}
+                </select>
+                <button type="submit">Update Model</button>
+            </form>
+            </div>
+            <script>
+            function confirmRestart() {{
+                if (confirm("Are you sure you want the server to fetch latest checked-in code and then restart the server?")) {{
+                window.location.href = '/update';
+                }}
+            }}
+            </script>
+            <pre>{''.join(last_lines)}</pre>
+        """)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/config", methods=["GET", "POST"])
+def config_route():
+    if request.method == "POST":
+        data = request.json
+        model_folder = data.get("model_folder")
+        if model_folder:
+            with open(config_path, 'r+') as f:
+                config = json.load(f)
+                config["model_folder"] = model_folder
+                f.seek(0)
+                json.dump(config, f)
+                f.truncate()
+            reload_model()  # Reload YOLO model with new configuration
+            return jsonify({"message": "Configuration updated successfully."}), 200
+        return jsonify({"error": "Invalid model folder."}), 400
+
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    return jsonify(config)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
