@@ -36,7 +36,6 @@ def logline(message):
 @app.route("/imageprocessing", methods=["POST"])
 def imageprocessing():
     starttime = datetime.now()
-    logline("Image Processing API, files: {}".format(request.files))
 
     if "image" not in request.files:
         return jsonify({"error": "No image file provided"}), 400
@@ -47,19 +46,13 @@ def imageprocessing():
         return jsonify({"error": "No selected file"}), 400
     logline(f"Received image: {image.filename}")
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")[:-3]
-    logline(f"Timestamp: {timestamp}")
     unique_filename = f"{timestamp}_{image.filename}"
-    logline(f"Unique filename: {unique_filename}")
     image_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-    logline(f"Saving image to: {image_path}")
     try:
         image.save(image_path)
-        logline(f"Image saved successfully: {image_path}")
 
         processed_img, extracted_text, roi_image, bbox = process_image(image_path)
-        logline(f"Processed image: {processed_img.shape}")
-        processed_image_filename = f"{timestamp}_{extracted_text[:10]}_{image.filename}"
-        logline(f"Processed image filename: {processed_image_filename}")
+        processed_image_filename = f"{timestamp}_box_{image.filename}"
         processed_image_path = os.path.join(PROCESSED_FOLDER, processed_image_filename)
         logline(f"Processed image saved as: {processed_image_path}")
 
@@ -70,12 +63,9 @@ def imageprocessing():
         roi_image_filename = f"{timestamp}_roi_{image.filename}"
         roi_image_path = os.path.join(PROCESSED_FOLDER, roi_image_filename)
         cv2.imwrite(roi_image_path, roi_image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-        logline(f"ROI image saved as: {roi_image_path}")
 
         elapsed_ms = (datetime.now() - starttime).total_seconds() * 1000
-        logline(
-            f"Image processed successfully. Extracted text: {extracted_text}. Processing time: {elapsed_ms:.2f} ms"
-        )
+        logline(f"Image processed successfully. Extracted text: {extracted_text}. Processing time: {elapsed_ms:.2f} ms")
 
         # Save metadata JSON
         metadata = {
@@ -148,15 +138,15 @@ from common import generate_navbar, generate_html
 
 @app.route("/wrong")
 def list_wrong_images():
-    wrong_folder = os.path.join(DATA_FOLDER, "wrong", "processed")
+    wrong_folder = os.path.join(DATA_FOLDER, "wrong", "original")
     files = [f for f in os.listdir(wrong_folder) if f.endswith(".jpg")]
 
     file_list_html = "<ul id='file-list'>"
     for file in files:
-        timestamp, extracted, remaining = file.split("_")[0], file.split("_")[1], file.split("_")[2].split(".")[0]
+        timestamp, remaining = file.split("_")[0], file.split("_")[1].split(".")[0]
         formatted_timestamp = datetime.strptime(timestamp, "%Y%m%d-%H%M%S-%f").strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        link_text = f"{formatted_timestamp} - {extracted} - {remaining}"
-        file_list_html += f"<li><a href='#' onclick=\"showImage('{timestamp}', '{extracted}', '{remaining}', 'wrong')\" id=\"link-{timestamp}\">{link_text}</a></li>"
+        link_text = f"{formatted_timestamp} - {remaining}"
+        file_list_html += f"<li><a href='#' onclick=\"showImage('{timestamp}', '{remaining}', 'wrong')\" id=\"link-{timestamp}\">{link_text}</a></li>"
     file_list_html += "</ul>"
 
     content = f"""
@@ -208,15 +198,15 @@ def remove_correct_images():
 
 @app.route("/correct")
 def list_correct_images():
-    correct_folder = os.path.join(DATA_FOLDER, "correct", "processed")
+    correct_folder = os.path.join(DATA_FOLDER, "correct", "original")
     files = [f for f in os.listdir(correct_folder) if f.endswith(".jpg")]
 
     file_list_html = "<ul id='file-list'>"
     for file in files:
-        timestamp, extracted, remaining = file.split("_")[0], file.split("_")[1], file.split("_")[2].split(".")[0]
+        timestamp, remaining = file.split("_")[0], file.split("_")[1].split(".")[0]
         formatted_timestamp = datetime.strptime(timestamp, "%Y%m%d-%H%M%S-%f").strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        link_text = f"{formatted_timestamp} - {extracted} - {remaining}"
-        file_list_html += f"<li><a href='#' onclick=\"showImage('{timestamp}', '{extracted}', '{remaining}', 'correct')\" id=\"link-{timestamp}\">{link_text}</a></li>"
+        link_text = f"{formatted_timestamp} - {remaining}"
+        file_list_html += f"<li><a href='#' onclick=\"showImage('{timestamp}', '{remaining}', 'correct')\" id=\"link-{timestamp}\">{link_text}</a></li>"
     file_list_html += "</ul>"
 
     content = f"""
@@ -314,16 +304,21 @@ def feedback():
     upload_file = next(
         (f for f in os.listdir(UPLOAD_FOLDER) if f.startswith(timestamp)), None
     )
-    processed_file = next(
-        (
-            f
-            for f in os.listdir(PROCESSED_FOLDER)
-            if f.startswith(timestamp) and not f.endswith(".json")
-        ),
-        None,
-    )
+    filename=upload_file.rsplit("_", 1)[-1].rsplit(".", 1)[0] if upload_file else None
+    json_file=os.path.join(PROCESSED_FOLDER, timestamp + "_" + filename + ".json")
+    if os.path.exists(json_file):
+        with open(json_file, "r") as f:
+            json_data = json.load(f)
+    else:
+        logline(f"JSON file not found for timestamp: {timestamp}, json_file: {json_file}")
+        return jsonify({"error": "JSON file not found for timestamp: " + timestamp}), 404
+    processed_roi_file = os.path.join(PROCESSED_FOLDER, timestamp + "_roi_" + filename + ".jpg")
+    # get the file object of the filename
+    file_object = os
+    processed_file = os.path.join(PROCESSED_FOLDER, timestamp + "_box_" + filename + ".jpg")
 
     if not upload_file or not processed_file:
+        logline(f"Files not found for timestamp: {timestamp}, upload_file: {upload_file}, processed_file: {processed_file}")
         return jsonify({"error": "Files not found for the given timestamp"}), 404
 
     label = "correct" if correct else "wrong"
@@ -333,40 +328,50 @@ def feedback():
     os.makedirs(processed_dest, exist_ok=True)
 
     src_upload = os.path.join(UPLOAD_FOLDER, upload_file)
-    src_processed = os.path.join(PROCESSED_FOLDER, processed_file)
+    # src_processed = os.path.join(PROCESSED_FOLDER, processed_file)
+    # Read the json file into a json object
+    # delete the json file if exists
+    if os.path.exists(json_file):
+        os.remove(json_file)
     dst_upload = os.path.join(original_dest, upload_file)
-    dst_processed = os.path.join(processed_dest, processed_file)
+    dst_processed = os.path.join(processed_dest, timestamp + "_box_" + filename + ".jpg")
+    dst_roi_processed = os.path.join(processed_dest, timestamp + "_roi_" + filename + ".jpg")
+    dst_json = os.path.join(processed_dest, processed_file.rsplit(".", 1)[0] + ".json")
+    logline(f"Moved files: {src_upload} -> {dst_upload}, {processed_file} -> {dst_processed}, {processed_roi_file} -> {dst_roi_processed}, deleted {json_file}")
+    # return jsonify({"message": f"Feedback saved to '{label}' set"}), 200
 
     os.rename(src_upload, dst_upload)
-    os.rename(src_processed, dst_processed)
+    os.rename(processed_file, dst_processed)
+    os.rename(processed_roi_file, dst_roi_processed)
 
-    if correct:
-        try:
-            image = cv2.imread(dst_upload)
-            results = model(image)[0]
+    # if correct:
+    try:
+        image = cv2.imread(dst_upload)
+        results = model(image)[0]
 
-            if results.boxes is not None and results.boxes.xyxy.shape[0] > 0:
-                best_box = (
-                    results.boxes.xyxy[results.boxes.conf.argmax()]
-                    .cpu()
-                    .numpy()
-                    .astype(int)
-                    .tolist()
-                )
-                annotation = {
-                    "bbox": best_box,
-                    "class": 0,
-                    "image": upload_file,
-                    "timestamp": timestamp,
-                }
-                annotation_path = os.path.join(
-                    original_dest, upload_file.rsplit(".", 1)[0] + ".json"
-                )
-                with open(annotation_path, "w") as f:
-                    json.dump(annotation, f)
-                logline(f"Annotation JSON saved for {upload_file}")
-        except Exception as e:
-            logline(f"Failed to save annotation JSON: {e}")
+        if results.boxes is not None and results.boxes.xyxy.shape[0] > 0:
+            best_box = (
+                results.boxes.xyxy[results.boxes.conf.argmax()]
+                .cpu()
+                .numpy()
+                .astype(int)
+                .tolist()
+            )
+            json_data["bbox"] = best_box
+            json_data["class"] = 0  # Assuming class 0 for the correct label
+            json_data["image"] = upload_file
+            # annotation = {
+            #     "bbox": best_box,
+            #     "class": 0,
+            #     "image": upload_file,
+            #     "timestamp": timestamp,
+            # }
+            annotation_path = os.path.join(original_dest, upload_file.rsplit(".", 1)[0] + ".json")
+            with open(annotation_path, "w") as f:
+                json.dump(json_data, f)
+            logline(f"Annotation JSON saved for {upload_file}")
+    except Exception as e:
+        logline(f"Failed to save json_data JSON: {e}")
 
     logline(f"Feedback recorded for {timestamp}: {'correct' if correct else 'wrong'}")
     return jsonify({"message": f"Feedback saved to '{label}' set"}), 200
@@ -443,5 +448,11 @@ def config_route():
         config = json.load(f)
     return jsonify(config)
 
+# Custom error handler to suppress detailed error information
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logline(f"Error: {e}")
+    return "", 204  # Return no content for any error
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
