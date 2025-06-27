@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OCR Labeling</title>
+    <style>
+        body { font-family: Arial; }
+        img { max-width: 80%; }
+        input[type="text"] { font-size: 20px; width: 150px; }
+        input[type="submit"] { font-size: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Label image: {{ image }}</h1>
+    <img src="/static/images/{{ image }}">  
+    <form method="POST">
+        <input type="hidden" name="filename" value="{{ image }}">
+        <label>Label:</label>
+        <input type="text" name="label" maxlength="6" required autofocus pattern="[A-Z0-9]{6}">
+        <input type="submit" value="Save">
+    </form>
+</body>
+</html>

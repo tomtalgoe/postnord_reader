@@ -11,3 +11,5 @@ runs/
 testing.ipynb
 data/*.zip
 transformers/
+testing_microsoft_huggingface/static/images
+testing_microsoft_huggingface/output
